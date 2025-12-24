@@ -1,5 +1,6 @@
 #include "stm32f10x.h"
 #include "Key.h"
+#include "Serial.h"
 #include "EXTI.h"
 #include "OLED.h"
 #include "Delay.h"
@@ -12,38 +13,39 @@
 #include "FILTER.h"
 
 extern uint16_t AD_Value[3];					//定义用于存放AD转换结果的全局数组  PA1:电量  PA2:前后  PA3:左右
-extern volatile uint32_t systick_ms;
-volatile uint8_t mpu_data_ready = 0;
+extern volatile uint32_t systick_ms;			//系统滴答计数器 毫秒	在#include "stm32f10x_it.c"
+volatile uint8_t mpu_data_ready = 0;			//MPU6050数据准备好标志位
 
-uint8_t NRFCONTROL_Val[32];//接收控制信息数组
-uint8_t NRF_TXFlag;//发送成功标志位
+uint8_t NRFCONTROL_Val[32];													//接收控制信息数组
+uint8_t NRF_TXFlag;								//发送成功标志位
 
-uint8_t Control_Flag = 1;//模式选择
+uint8_t Control_Flag = 1;						//模式选择
 
 int16_t Target_Value1;
 int16_t Target_Value2;
 
-Key_t key_UP, key_DOWN, key_LEFT, key_RIGHT, key_MODE;
-float pitch,roll,yaw;
+Key_t key_UP, key_DOWN, key_LEFT, key_RIGHT, key_MODE;			//定义按键结构体变量
+MPU_FILTER_t pitch_f,roll_f;									//滤波结构体变量
 
-float pitch_filt,roll_filt;
+float pitch,roll,yaw;										//原始数据
+float pitch_filt,roll_filt;													//滤波后数据
 
-MPU_FILTER pitch_f,roll_f;
+
 
 
 int main(void)
 {	
 	SystemInit();
-	DWT_Delay_Init();
+	DWT_Delay_Init();//DWT延时
 	
 	MPU6050_Init();
-  DMP_Init();
+  	DMP_Init();
 	MPU6050_EXTI_Init();
 
 	LED_Init();
 	Key_Init();	
-	Key_StructInit(&key_UP, GPIOB, GPIO_Pin_12);
-	Key_StructInit(&key_LEFT, GPIOB, GPIO_Pin_13);
+	//Key_StructInit(&key_UP, GPIOB, GPIO_Pin_12);
+	//Key_StructInit(&key_LEFT, GPIOB, GPIO_Pin_13);
 	Key_StructInit(&key_RIGHT, GPIOB, GPIO_Pin_14);
 	Key_StructInit(&key_DOWN, GPIOB, GPIO_Pin_15);
 	Key_StructInit(&key_MODE, GPIOB, GPIO_Pin_11);
@@ -51,17 +53,36 @@ int main(void)
 	PowerADC_Init();
 	NRF24L01_Init();			
 	
+	Serial_Init(9600);
 
 	OLED_Init();
-
 	OLED_ShowString(0 ,10,"pitch:",OLED_8X16);
 	OLED_ShowString(0 ,30,"roll:", OLED_8X16);
 	OLED_Update();
 	
 	MPU_FILTER_Init(&pitch_f);
 	MPU_FILTER_Init(&roll_f);
+
+	/*NVIC中断分组*/
+	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+
 	while (1)
 	{	
+
+		if(Key_Scan(&key_MODE))//检测到按键变化
+		{
+			if(key_MODE.state == KEY_PRESSED)//检测到短按
+			{
+				Control_Flag ^= 1;//按位异或 1^1=0 0^1=1 切换模式
+				if(Control_Flag == 0)
+				{
+					OLED_ShowString(0 ,0,"Mode:Potentiometer ",OLED_8X16);//Potentiometer：电位器
+				}else if(Control_Flag == 1)
+				{
+					OLED_ShowString(0 ,0,"Mode:Gyroscope    ",OLED_8X16);//Gyroscope：陀螺仪
+				}
+			}
+		}
 
 		if(Control_Flag == 0)
 		{
@@ -78,11 +99,12 @@ int main(void)
 		//MPU6050陀螺仪映射速度数据
 			if(mpu_data_ready == 1)
 			{
-				MPU6050_DMP_Get_Data(&pitch,&roll,&yaw);
+				MPU6050_DMP_Get_Data(&pitch,&roll,&yaw);		
 				mpu_data_ready = 0;
 				pitch_filt = MPU_FILTER_Update(&pitch_f, pitch);
 				roll_filt  = MPU_FILTER_Update(&roll_f, roll);
-			}
+			}//printf("%f,%f,%f,%f \n",pitch,roll,pitch_filt,roll_filt);
+			
 			Target_Value1 = (int16_t)((pitch_filt +50)/100*180);//-50  - 50 >> 0-180
 			Target_Value2 = (int16_t)((-roll_filt +40)/80*180);//-40  - 40  >> 0-180
 			if(Target_Value1 >  180) Target_Value1 =  180;
@@ -100,7 +122,7 @@ int main(void)
  		OLED_ShowSignedNum(50,30,Target_Value2,3,OLED_8X16);		
 		OLED_Update();
 
-		NRF_TXFlag = Send(NRFCONTROL_Val);//发送数据 
+		//NRF_TXFlag = Send(NRFCONTROL_Val);//发送数据 
 		
 		if(NRF_TXFlag == TX_OK)//如果发送成功则对应的LED点亮
 		{

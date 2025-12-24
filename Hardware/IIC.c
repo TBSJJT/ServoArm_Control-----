@@ -1,12 +1,12 @@
 #include "IIC.h"
 
-#define IIC_SCL_PIN        GPIO_Pin_9
-#define IIC_SDA_PIN        GPIO_Pin_10
-#define IIC_GPIO_PORT      GPIOA
+#define IIC_SCL_PIN        GPIO_Pin_12
+#define IIC_SDA_PIN        GPIO_Pin_13
+#define IIC_GPIO_PORT      GPIOB
 
 void IIC_Init(void)//引脚配置
 {
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
     GPIO_InitTypeDef GPIO_InitStructure;
     GPIO_InitStructure.GPIO_Pin = IIC_SCL_PIN | IIC_SDA_PIN; // SCL and SDA
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD; // Open-drain output

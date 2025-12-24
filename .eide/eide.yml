@@ -113,6 +113,8 @@ virtualFolder:
         - path: Hardware/EXTI.h
         - path: Hardware/FILTER.c
         - path: Hardware/FILTER.h
+        - path: Hardware/Serial.c
+        - path: Hardware/Serial.h
       folders: []
 dependenceList: []
 outDir: build
@@ -123,6 +125,7 @@ targets:
     cppPreprocessAttrs:
       defineList:
         - USE_STDPERIPH_DRIVER
+        - STM32F10X_MD
       incList:
         - User
         - Start
@@ -246,4 +249,9 @@ targets:
         otherCmds: ""
         proType: 1
         speed: 8000
-    uploader: JLink
+      OpenOCD:
+        baseAddr: "0x08000000"
+        bin: ""
+        interface: stlink
+        target: stm32f1x
+    uploader: OpenOCD

@@ -22,8 +22,8 @@ void MPU6050_EXTI_Init(void)
 
     NVIC_InitTypeDef NVIC_InitStruct;
     NVIC_InitStruct.NVIC_IRQChannel = EXTI15_10_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 2;
-    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 2;
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 
