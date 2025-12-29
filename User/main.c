@@ -17,6 +17,7 @@ extern volatile uint32_t systick_ms;			//系统滴答计数器 毫秒	在#includ
 volatile uint8_t mpu_data_ready = 0;			//MPU6050数据准备好标志位
 
 uint8_t NRFCONTROL_Val[32];													//接收控制信息数组
+float 	NRFCONTROL_FloatVal[8];		//8*4=32字节 用于存放发送的浮点数据
 uint8_t NRF_TXFlag;								//发送成功标志位
 
 uint8_t Control_Flag = 1;						//模式选择
@@ -29,8 +30,10 @@ MPU_FILTER_t pitch_f,roll_f;									//滤波结构体变量
 
 float pitch,roll,yaw;										//原始数据
 float pitch_filt,roll_filt;													//滤波后数据
+float Target_Value1_f,Target_Value2_f;
 
-
+float data[4]; 
+uint8_t tail[4] = {0x00, 0x00, 0x80, 0x7f};
 
 
 int main(void)
@@ -56,8 +59,10 @@ int main(void)
 	Serial_Init(9600);
 
 	OLED_Init();
-	OLED_ShowString(0 ,10,"pitch:",OLED_8X16);
-	OLED_ShowString(0 ,30,"roll:", OLED_8X16);
+	OLED_ShowString(0 ,0,"pitch:",OLED_8X16);
+	OLED_ShowString(0 ,15,"roll:", OLED_8X16);
+	OLED_ShowString(0 ,30,"pitch_f:",OLED_8X16);
+	OLED_ShowString(0 ,45,"roll_f:", OLED_8X16);
 	OLED_Update();
 	
 	MPU_FILTER_Init(&pitch_f);
@@ -104,26 +109,49 @@ int main(void)
 				pitch_filt = MPU_FILTER_Update(&pitch_f, pitch);
 				roll_filt  = MPU_FILTER_Update(&roll_f, roll);
 			}//printf("%f,%f,%f,%f \n",pitch,roll,pitch_filt,roll_filt);
-			
-			Target_Value1 = (int16_t)((pitch_filt +50)/100*180);//-50  - 50 >> 0-180
-			Target_Value2 = (int16_t)((-roll_filt +40)/80*180);//-40  - 40  >> 0-180
-			if(Target_Value1 >  180) Target_Value1 =  180;
-			if(Target_Value1 < 0) Target_Value1 = 0;
-			if(Target_Value2 >  180) Target_Value2 =  180;
-			if(Target_Value2 < 0) Target_Value2 = 0;
+
+			// 发送浮点数据给vofa+ (justfloat)
+			//data[0] = (pitch + 50.0f) * 180.0f / 100.0f;
+			//data[1] = (pitch_filt + 50.0f) * 180.0f / 100.0f;
+			//data[2] = (-roll + 40.0f) * 180.0f / 80.0f;
+			//data[3] = (-roll_filt + 40.0f) * 180.0f / 80.0f;
+			//Serial_SendArray((uint8_t *)data, sizeof(float) * 4); 
+			// 发送帧尾
+			//Serial_SendArray(tail, 4);	
+
+			Target_Value1_f = (pitch_filt + 50.0f) * 180.0f / 100.0f;     // 0..180
+			Target_Value2_f = (-roll_filt + 40.0f) * 180.0f / 80.0f;      // 0..180
+
+			// 限幅（float）
+			if (Target_Value1_f > 180.0f) Target_Value1_f = 180.0f;
+			if (Target_Value1_f < 0.0f)   Target_Value1_f = 0.0f;
+			if (Target_Value2_f > 180.0f) Target_Value2_f = 180.0f;
+			if (Target_Value2_f < 0.0f)   Target_Value2_f = 0.0f;
+
+			// 转成整数用于发送（建议四舍五入）
+			Target_Value1 = (int16_t)(Target_Value1_f + 0.5f);
+			Target_Value2 = (int16_t)(Target_Value2_f + 0.5f);
 
 			NRFCONTROL_Val[0] = (Target_Value1 >> 8) & 0xFF;
 			NRFCONTROL_Val[1] = (Target_Value1)      & 0xFF;
 			NRFCONTROL_Val[2] = (Target_Value2   >> 8) & 0xFF;
 			NRFCONTROL_Val[3] = (Target_Value2)       & 0xFF;
+			// 准备浮点数据用于发送
+			NRFCONTROL_FloatVal[0] = Target_Value1_f;
+			NRFCONTROL_FloatVal[1] = Target_Value2_f;
+			NRFCONTROL_FloatVal[2] = pitch_filt;
+			NRFCONTROL_FloatVal[3] = roll_filt;
 		}
 		//速度显示
-		OLED_ShowSignedNum(50,10,Target_Value1,3,OLED_8X16);
- 		OLED_ShowSignedNum(50,30,Target_Value2,3,OLED_8X16);		
+		OLED_ShowFloatNum(50,0,Target_Value1_f,3,2,OLED_8X16);
+ 		OLED_ShowFloatNum(50,15,Target_Value2_f,3,2,OLED_8X16);		
+		OLED_ShowFloatNum(50,30,pitch_filt,3,2,OLED_8X16);
+ 		OLED_ShowFloatNum(50,45,roll_filt,3,2,OLED_8X16);		
 		OLED_Update();
 
 		//NRF_TXFlag = Send(NRFCONTROL_Val);//发送数据 
-		
+
+		SendFloatArray_32(NRFCONTROL_FloatVal, 4);//发送浮点数据
 		if(NRF_TXFlag == TX_OK)//如果发送成功则对应的LED点亮
 		{
 			if(Target_Value1 != 0)LED1_ON();

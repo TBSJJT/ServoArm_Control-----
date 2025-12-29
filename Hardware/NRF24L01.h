@@ -8,6 +8,7 @@ void R_Buf(uint8_t Reg , uint8_t* Buf, uint8_t Len);
 void NRF24L01_Init(void);
 void Receive(uint8_t* Buf);
 uint8_t Send(uint8_t* Buf);
+uint8_t SendFloatArray_32(float *arr, uint8_t n);  // n<=8
 
 #endif
 

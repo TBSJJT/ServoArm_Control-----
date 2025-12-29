@@ -1,6 +1,7 @@
 #include "stm32f10x.h"                  // Device header
 #include "NRF24L01_define.h"
 #include "Delay.h"
+#include <string.h>
 
 uint8_t T_ADDR[5]={0xF0,0xF0,0xF0,0xF0,0xF0};
 uint8_t R_ADDR[5]={0xF0,0xF0,0xF0,0xF0,0xF0};
@@ -193,3 +194,20 @@ uint8_t Send(uint8_t* Buf)
 	}
 	return 0; 
 }
+
+uint8_t SendFloatArray_32(float *arr, uint8_t n)  // n<=8
+{
+    uint8_t tx[32] = {0};
+
+    if (n > 8) n = 8;
+
+    // 直接把 float 的 4*n 个字节拷进 tx
+    memcpy(&tx[0], arr, (size_t)n * 4);
+
+    return Send(tx);
+}
+
+/*
+	float f[4] = {pitch, pitch_filt, roll, roll_filt};
+	NRF_TXFlag = SendFloatArray_32(f, 4);
+*/
