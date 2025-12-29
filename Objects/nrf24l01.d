@@ -30,3 +30,4 @@
 .\objects\nrf24l01.o: .\Library\misc.h
 .\objects\nrf24l01.o: Hardware\NRF24L01_define.h
 .\objects\nrf24l01.o: Hardware\Delay.h
+.\objects\nrf24l01.o: D:\Keil5\ARM\ARMCC\Bin\..\include\string.h

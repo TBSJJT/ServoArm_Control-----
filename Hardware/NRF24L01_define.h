@@ -7,14 +7,14 @@
 #define MISO_Port  GPIOA
 #define MOSI_Port  GPIOA
 #define SCK_Port   GPIOA
-#define CSN_Port   GPIOA
+#define CSN_Port   GPIOB
 
 #define IRQ_Pin    GPIO_Pin_1
 #define CE_Pin     GPIO_Pin_0
 #define MOSI_Pin   GPIO_Pin_7
 #define MISO_Pin   GPIO_Pin_6
 #define SCK_Pin    GPIO_Pin_5
-#define CSN_Pin    GPIO_Pin_4
+#define CSN_Pin    GPIO_Pin_5
 
 //寄存器地址代码
 #define CONFIG      0x00

@@ -9,7 +9,6 @@
 
 
 void PowerADC_Init(void);
-uint16_t mapJoystickToAngle(uint16_t adc);
-
+uint16_t Map_Pote(uint16_t adc);
 
 #endif

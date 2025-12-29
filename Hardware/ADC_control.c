@@ -1,7 +1,7 @@
 #include "stm32f10x.h"
 #include "ADC_control.h"
 
-uint16_t AD_Value[3];					//定义用于存放AD转换结果的全局数组  PA1:电量  PA2:前后  PA3:左右
+uint16_t AD_Value[5];					//定义用于存放AD转换结果的全局数组  PA0/PA1:右摇杆  PA2/PA3:左摇杆 PA4：电量
 
 /**
   * 函    数：AD初始化
@@ -21,14 +21,16 @@ void PowerADC_Init(void)
 	/*GPIO初始化*/
 	GPIO_InitTypeDef GPIO_InitStructure;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 |GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3| GPIO_Pin_4;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);					//将PA1、PA2和PA3引脚初始化为模拟输入
+	GPIO_Init(GPIOA, &GPIO_InitStructure);					//将PA01234引脚初始化为模拟输入
 	
 	/*规则组通道配置*/
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 1, ADC_SampleTime_55Cycles5);	//规则组序列1的位置，配置为通道1
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 2, ADC_SampleTime_55Cycles5);	//规则组序列2的位置，配置为通道2
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 3, ADC_SampleTime_55Cycles5);	//规则组序列3的位置，配置为通道3
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);	//规则组序列1的位置，配置为通道1
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 2, ADC_SampleTime_55Cycles5);	//规则组序列2的位置，配置为通道2
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 3, ADC_SampleTime_55Cycles5);	//规则组序列3的位置，配置为通道3
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 4, ADC_SampleTime_55Cycles5);	//规则组序列4的位置，配置为通道4
+	ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 5, ADC_SampleTime_55Cycles5);	//规则组序列5的位置，配置为通道5
 	
 	/*ADC初始化*/
 	ADC_InitTypeDef ADC_InitStructure;											//定义结构体变量
@@ -37,7 +39,7 @@ void PowerADC_Init(void)
 	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;			//外部触发，使用软件触发，不需要外部触发
 	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;							//连续转换，使能，每转换一次规则组序列后立刻开始下一次转换
 	ADC_InitStructure.ADC_ScanConvMode = ENABLE;								//扫描模式，使能，扫描规则组的序列，扫描数量由ADC_NbrOfChannel确定
-	ADC_InitStructure.ADC_NbrOfChannel = 3;										//通道数，为3，扫描规则组的前3个通道
+	ADC_InitStructure.ADC_NbrOfChannel = 5;										//通道数，为5，扫描规则组的前5个通道
 	ADC_Init(ADC1, &ADC_InitStructure);											//将结构体变量交给ADC_Init，配置ADC1
 	
 	/*DMA初始化*/
@@ -49,7 +51,7 @@ void PowerADC_Init(void)
 	DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;			//存储器数据宽度，选择半字，与源数据宽度对应
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;						//存储器地址自增，选择使能，每次转运后，数组移到下一个位置
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;							//数据传输方向，选择由外设到存储器，ADC数据寄存器转到数组
-	DMA_InitStructure.DMA_BufferSize = 3;										//转运的数据大小（转运次数），与ADC通道数一致
+	DMA_InitStructure.DMA_BufferSize = 5;										//转运的数据大小（转运次数），与ADC通道数一致
 	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;								//模式，选择循环模式，与ADC的连续转换一致
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;								//存储器到存储器，选择失能，数据由ADC外设触发转运到存储器
 	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;						//优先级，选择中等
@@ -70,7 +72,7 @@ void PowerADC_Init(void)
 	ADC_SoftwareStartConvCmd(ADC1, ENABLE);	//软件触发ADC开始工作，由于ADC处于连续转换模式，故触发一次后ADC就可以一直连续不断地工作
 }
 
-uint16_t mapJoystickToAngle(uint16_t adc)
+uint16_t Map_Pote(uint16_t adc)
 {
     const uint16_t mid  = ADC_MID;   // 2048
     const uint16_t dead = DEAD;      // 50

@@ -1,7 +1,7 @@
 #include "IIC.h"
 
-#define IIC_SCL_PIN        GPIO_Pin_12
-#define IIC_SDA_PIN        GPIO_Pin_13
+#define IIC_SCL_PIN        GPIO_Pin_6
+#define IIC_SDA_PIN        GPIO_Pin_7
 #define IIC_GPIO_PORT      GPIOB
 
 void IIC_Init(void)//引脚配置
